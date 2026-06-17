@@ -3,6 +3,7 @@
 # Professional RAG ststem built with Langchain
 # This is production-grade banking AI
 #==================================================================
+#updated: added to git repository - phase 4 begin
 
 import os
 from dotenv import load_dotenv
