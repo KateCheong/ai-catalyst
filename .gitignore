@@ -1,0 +1,29 @@
+#==========================================================
+# .gitignore - Files Git should NEVER track
+#=========================================================
+
+#Your APU key - never commit this
+.env
+
+#python complied files - not needed
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual enviornment - too large, not needed
+ai-catalyst-env/
+venv/
+env/
+
+#FAISS index files - large binary files, rebuild from code
+*.index
+*.faiss
+
+#macOS system files
+.DS_Store
+
+# VS Code settings - optional, personal preferencce
+.vscode/
+
+# Jupter notebook checkpoints
+.ipynb_checkpoints/
