@@ -5,6 +5,7 @@
 #==================================================================
 #updated: added to git repository - phase 4 begin
 
+
 import os
 from dotenv import load_dotenv
 
@@ -18,7 +19,7 @@ print(f"API key loaded.: {api_key[:5]}...")
 #langchian import
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-#from langchain_community.document_loaders import TextLoader
+from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
@@ -41,6 +42,26 @@ llm = ChatOpenAI(
 embeddings = OpenAIEmbeddings(
     model="text-embedding-3-small"
 )
+
+
+#-------Teporary Code-------
+import os
+from dotenv import load_dotenv
+load_dotenv()
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise ValueError("API KEY not found.")
+else:
+    print(f" API load: {api_key[:8]}...")
+
+from langchain_core.messages import HumanMessage
+test = llm.invoke([HumanMessage(content="Reply with OK only.")])
+print(f"LLM TEST: {test.content}")
+
+#------End DIAGNOSTIC-------------------
+
 
 #=====================================================================
 # STEP 2 - Policy Document
@@ -107,7 +128,7 @@ INDEX_PATH = "langchain_faiss_index"
 
 if os.path.exists(INDEX_PATH):
     print(f"Loading existing index...")
-    index = FAISS.load_local(
+    vectorstore = FAISS.load_local(
         INDEX_PATH,
         embeddings,
         allow_dangerous_deserialization=True
@@ -149,7 +170,7 @@ from langchain_core.messages import HumanMessage
 test_llm = llm.invoke([HumanMessage(content="Reply with the word OK only.")])
 if not test_llm or not test_llm.content:
     raise ValueError("LLM return None. Check your API key and credits.")
-print(f"    LLM OK - responded: {test_llm.cotent.strip()}")
+print(f"    LLM OK - responded: {test_llm.content.strip()}")
 
 print("All components OK.")
 
@@ -207,7 +228,13 @@ rag_chain =(
 
 def ask(question):
     """Ask a question using the complete RAG pipeline."""
-    result = rag_chain.invoke(question)
+    answer = rag_chain.invoke(question)
+
+    #debug
+    #print(f"DEBUG type: {type(answer)}")
+   # print(f"DEBUG value: {answer}")
+
+    return answer
 
 #=====================================================================
 # STEP 9 - Test questions
