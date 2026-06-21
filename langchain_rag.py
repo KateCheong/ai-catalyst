@@ -77,7 +77,7 @@ raw_policies = [
     "High risk customers must have their transactions reviewed by a senior AML officer before processing",
 
     #KYC policy
-    "All new clients mist provide government issued photo identification before account opening can be completed.",
+    "All new clients must provide government issued photo identification before account opening can be completed.",
     "Corporate clients must provide beneficial ownership information for all shareholders holding more than 25 precent.",
     "KYC documentation must be refreshed every two years for standard risk clients and annually  for high risk clients.",
     "Enhanced due diligence is required for politicially exposed persons regardless of transaction volume.",
@@ -226,15 +226,65 @@ rag_chain =(
 # STEP 8 - Ask Function
 #=====================================================================
 
-def ask(question):
-    """Ask a question using the complete RAG pipeline."""
-    answer = rag_chain.invoke(question)
+def ask(question, top_k=3):
+    """
+    Ask a question using the complete RAG pipeline.
+    Returns both answer AND source documents used.
+
+    Returns:
+        dict with keys:
+            'answer' : the answer string
+            'source' : list of source docuemnt text used
+    """
+
+    try:
+        #---Step 1: Retrieve relevant docuemnts ---------------------
+        # We retrieve seperately so we can return source-------------
+        retrieved_docs = retriever.invoke(question)
+
+        #---Step 2: Format conext for the prompt ---------------------
+        context = format_docs(retrieved_docs)
+
+        #---Step 3: Build and run the prompt chain--------------------
+        # Run just the prompt + llm + Parser part
+        answer_chain = rag_prompt | llm | StrOutputParser()
+
+        result = answer_chain.invoke({
+            "context": context,
+            "question" : question
+        })
+
+        #---Step 4: handle return type safely--------------------------
+        if result is None:
+            answer = "No answer returned. Please try again."
+        elif isinstance(result, str):
+            answer = result
+        elif isinstance(result, dict):
+            answer = result.get("answer") or result.get("output") or str(result)
+        elif hasattr(result, "content"):
+            answer = result.content
+        else:
+            answer = str(result)
+        
+        #---Step 5: Extract source text----------------------------------
+        sources =[doc.page_content for doc in retrieved_docs]
+
+        #---Step 6: return both answer and sources-----------------------
+        return{
+            "answer" : answer,
+            "sources" : sources
+        }
+    except Exception as e:
+        return{
+            "answer": f"Error generating answer: {str(e)}",
+            "sources" : []
+        }
+
 
     #debug
     #print(f"DEBUG type: {type(answer)}")
    # print(f"DEBUG value: {answer}")
 
-    return answer
 
 #=====================================================================
 # STEP 9 - Test questions

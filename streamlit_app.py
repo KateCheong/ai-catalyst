@@ -84,11 +84,18 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
         # show resources if this was an assistant message
-        if message["role"] == "assistant" and "sources" in message:
-            with st.expander("Sources used", expanded=False):
-                for i, source in enumerate(message["sources"], 1):
-                    st.caption(f"[{i}] {source}")
-
+        if message["role"] == "assistant":
+            sources = message.get("sources", [])
+            if sources:
+                with st.expander(
+                    f"Sources used ({len(sources)} policy sections)",
+                    expanded=False
+                ):
+                    for i, source in enumerate(sources, 1):
+                        st.markdown(f"**Source {i}**")
+                        st.caption(source)
+                        if i < len(sources):
+                            st.divider()
 #====================================================
 # CHAT INPUT - The question box at bottom
 # st.chat_input stay fixed at the bottom
@@ -107,16 +114,39 @@ if prompt := st.chat_input("Ask a policy question..."):
     with st.chat_message("user"):
         st.markdown(prompt)
     
-    #---Generate and display response----
-    with st.spinner("Searching policy docuemnts..."):
-        answer = ask(prompt)
-    
-    #---Display answer-------------------
-    st.markdown(answer)
+    #---Generate and display assistant response-------------
+    with st.chat_message("assistant"):
+        
+        #Show spinner while RAG works
+        with st.spinner("Searching policy docuemnts..."):
+            result = ask(prompt)
+        
+        #Extract answer and source from result dict
+        answer = result.get("answer", "No answer returned")
+        sources = result.get("sources", [])
 
-    #---Add assistant message to history--
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": answer,
-        "sources": [] #we will add in concept 4
-    })
+        #Display anser
+        st.markdown(answer)
+
+        #--display sources citations 
+        if sources:
+            with st.expander(
+                f"Sources used ({len(sources)} policy sections)",
+                expanded= False
+            ):
+                for i, source in enumerate(sources, 1):
+                    st.markdown(f"**Source {i}:**")
+                    st.caption(source)
+                    if i < len(sources):
+                        st.divider()
+        else:
+            st.caption("No sources retrieved.")
+        
+        #-- Add to conversation history------
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": answer,
+            "sources" : sources
+        })
+
+    
