@@ -240,40 +240,41 @@ def ask(question):
 # STEP 9 - Test questions
 #=====================================================================
 
-test_questions = [
-    "What do I do when I see a suspicious transaction?",
-    "How ofenn does KYC need to be updated?",
-    "How old are you?",
-    "What happen if a trade settlement fails?",
-    "Do I need to report large cash deposit?"
-] 
+if __name__ == "__main__":
+    test_questions = [
+        "What do I do when I see a suspicious transaction?",
+        "How ofenn does KYC need to be updated?",
+        "How old are you?",
+        "What happen if a trade settlement fails?",
+        "Do I need to report large cash deposit?"
+    ] 
 
-print("=" *60)
-print("Langchain Policy Q&A RAG SYSTEM")
-print("=" *60)
+    print("=" *60)
+    print("Langchain Policy Q&A RAG SYSTEM")
+    print("=" *60)
 
-for question in test_questions:
-    print(f"\n QUESTION:\n {question}")
-    print(f"\n ANSWER:\n {ask(question)}")
-    print("-" * 60)
+    for question in test_questions:
+        print(f"\n QUESTION:\n {question}")
+        print(f"\n ANSWER:\n {ask(question)}")
+        print("-" * 60)
 
-#=====================================================================
-# STEP 10 - Interactive mode
-#=====================================================================
+    #=====================================================================
+    # STEP 10 - Interactive mode
+    #=====================================================================
 
-print("\n======== Interative Q&A ==========")
-print("Ask any question about banking policy.")
-print("Type 'quit' to end session\n")
+    print("\n======== Interative Q&A ==========")
+    print("Ask any question about banking policy.")
+    print("Type 'quit' to end session\n")
 
-while True:
-    question = input("You: ").strip()
+    while True:
+        question = input("You: ").strip()
 
-    if question.lower() == 'quit':
-        print("Session ended.")
-        break
+        if question.lower() == 'quit':
+            print("Session ended.")
+            break
 
-    if question.strip() == "":
-        continue
+        if question.strip() == "":
+            continue
 
-    print(f"\n ANSWER: \n {ask(question)}")
-    print("-" * 60)
+        print(f"\n ANSWER: \n {ask(question)}")
+        print("-" * 60)
