@@ -17,7 +17,24 @@ os.environ["OPENAI_API_KEY"]=os.getenv("OPENAI_API_KEY")
 # The if __name__ == "__main__" block means test questions 
 # do NOT run automatically on import
 
-from langchain_rag import ask, INDEX_PATH, test_docs
+# ========================================================
+# Cache the rag system
+# @st.cache_resource means this only runs ONCE
+# even though Streamlit rerun the script constantly
+# without this - the FAISS index rebuilds on every interaction
+# =========================================================
+@st.cache_resource
+def load_rag_system():
+    """
+    Loads the RAG system and caches it.
+    Prevents rebuilding the FAISS index on every rerun.
+    """
+    from langchain_rag import ask, retriever, test_docs
+    return ask, retriever, test_docs
+
+#load the cached RAG system
+ask, retriever, test_docs = load_rag_system()
+
 
 #------Page configuration - always first line--------
 st.set_page_config(
