@@ -10,7 +10,20 @@ from dotenv import load_dotenv
 
 #-----Load env variables-----------------------------
 load_dotenv()
-os.environ["OPENAI_API_KEY"]=os.getenv("OPENAI_API_KEY")
+api_key =os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    try:
+        api_key = st.secrets.get("OPENAI_API_KEY")
+    except Exception:
+        api_key= None
+
+if not api_key:
+    st.error(
+        "OPENAI API KEY NOT FOUND, add to your Streamlit Cloud Secrects"
+    )
+    st.stop()
+os.environ["OPENAI_API_KEY"] = api_key
 
 #----Import RAG system--------------------------------
 # This imposts ask() from langchain)rag.py
