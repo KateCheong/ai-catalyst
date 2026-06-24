@@ -39,11 +39,151 @@ os.environ["OPENAI_API_KEY"] = api_key
 @st.cache_resource
 def load_rag_system():
     """
-    Loads the RAG system and caches it.
-    Prevents rebuilding the FAISS index on every rerun.
+    Builds the complete RAG system from scratch.
+    Cache by Streamlit - only runs once per session.
     """
-    from langchain_rag import ask
-    return ask
+    try:
+        #----------Step 1 import-----------------
+        from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+        from langchain_community.vectorstores import FAISS
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
+        from langchain_core.prompts import ChatPromptTemplate
+        from langchain_core.runnables import RunnablePassthrough
+        from langchain_core.documents import Document
+
+        #--------Step 2 Initialise modeles-------
+        llm = ChatOpenAI(
+            model="gpt=4o-mini",
+            temperature=0.0,
+            max_tokens=400
+        )
+
+        embeddings = OpenAIEmbeddings(
+            model="text-embedding-3-small"
+        )
+
+        #-----Step 3 Policy documents-----------
+        raw_policies = [
+
+                        #AML Policies
+                        "All Cash transactions excedding $10,000 must be reported to regulators via a Currency Transaction ",
+                        "Suspicious activity must be reported via a SAR filing within 30 days of detection regardless of transaction amount.",
+                        "Structring transactions to avoid reporting thresholds is a criminal offence and must be flagged immediately.",
+                        "Transaction monitoring systems must be reviewed and updated at minimum annually to reflect current risk typologies.",
+                        "High risk customers must have their transactions reviewed by a senior AML officer before processing",
+
+                        #KYC policy
+                        "All new clients must provide government issued photo identification before account opening can be completed.",
+                        "Corporate clients must provide beneficial ownership information for all shareholders holding more than 25 precent.",
+                        "KYC documentation must be refreshed every two years for standard risk clients and annually  for high risk clients.",
+                        "Enhanced due diligence is required for politicially exposed persons regardless of transaction volume.",
+                        "Clients who fail to provide KYC documents within 30 days must have their accounts suspended pending review."
+
+                        #Settlement Policues
+                        "Failed settlements must be reported to the operations manager within one hour of the settlement deadline.",
+                        "Trade settlement failures exceeding three consective days must be escalted to the head of operations",
+                        "All settlemnt discrepancies aboove $50,000 must be documented and reiewed by risk committee.",
+                        "Counterparty confiramtion must be received before any settlement instructio is marked as completed.",
+                        "Settlement failures caused by system errors must be logged in the incident management system within 2 hours."
+
+                        #General policies
+                        "All staff must complete annual AML training and pass the assessment with a minium score of 80 precent.",
+                        "Client compliants must be acknowledge within 24 hours and resolved within 15 bussiness days.",
+                        "Any potential conflict of interest must be disclosed to the compliance team before engaging with the client.",
+                        "Confidential client information must never be shared externally without writtern consent and legal approval.",
+                        "All compliance breaches must be reported to the Chief COmpliance Officer within 24 hours of discovery."
+                        ]
+
+        documents = [
+            Document(
+                page_content=policy,
+                metadata={"source":"Policy Manual 2025"}
+            )
+            for policy in raw_policies
+        ]
+
+        #--------Step 4 Split docuemnts--------------------
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=500,
+            chunk_overlap=50
+        )
+        chunks = splitter.split_documents(documents)
+
+        #-----Step 5 Build FAISS index------------------
+        # always build fresh on Sreamlit Cloud
+        # no saved index available in cloud enviornment
+        vectorstore = FAISS.from_documents(chunks, embeddings)
+        retriever = vectorstore.as_retriever(
+            search_kwargs = {"k": 3}
+        )
+
+        #-----Step 6 RAG prompt--------------------------
+        rag_prompt = ChatPromptTemplate.from_template("""
+        You are a senior compliabce assistant at bank operation team.
+        Answer the question using ONLY the context provided below
+
+        STRICT RULES:
+        - Only use information explicitly staed in the context below
+        - If the answer is not in the context say exactly:
+            'I cannot find this the available policy documents.
+            Please consult your compliance team directly.'
+        - Never invent facts, figures, deadlines, or policy details
+        - Quote the relevant policy statement where possible
+        - Be concise and professional
+        - If multiple poclicies are relevant mention all of them
+
+        CONTEXT FROM POLICY DOCUMENTS:
+        {context}
+
+        QUESTION: 
+        {question}
+
+        Answer:
+        """)
+        #-----Step7 format doc heleper-----------
+        def fromat_docs(docs):
+            return "\n\n".join(
+                f"[Policy {i+1}]: {doc.page_content}"
+                for i, doc in enumerate(docs)
+            )
+
+        #----Step 8 Build ask function-----------
+        def ask(question):
+            try:
+                retrieved_docs = retriever.invoke(question)
+                context        = format_docs(retrieved_docs)
+                answer_chain   = rag_prompt| llm| StrOutputParser()
+
+                result = answer_chain.invoke({
+                    "context": context,
+                    "question": question
+                })
+
+                #handle return types
+                if result is None:
+                    answer = "No answer returned. Please try again"
+                elif isinstance(result, str):
+                    answer = answer
+                elif isinstance(result, dict):
+                    answer = answer.get("answer") or str(answer)
+                elif hasattr(result, "content"):
+                    answer = answer.content
+                else:
+                    answer = str(answer)
+                
+                sources = [doc.page_content for doc in retrieved_docs]
+
+                return{"answer": answer, "sources": sources}
+            
+            except Exception as e:
+                return{
+                    "answer": f"Error: {str(e)}",
+                    sources:[]
+                }
+        return ask
+    except Exception as e:
+        st.error(f"Failed to load RAG system: {str(e)}")
+        st.stop()
 
 #load the cached RAG system
 ask = load_rag_system()
