@@ -178,7 +178,7 @@ def load_rag_system():
             except Exception as e:
                 return{
                     "answer": f"Error: {str(e)}",
-                    sources:[]
+                    "sources" :[]
                 }
         return ask
     except Exception as e:
