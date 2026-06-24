@@ -47,13 +47,14 @@ def load_rag_system():
         from langchain_openai import ChatOpenAI, OpenAIEmbeddings
         from langchain_community.vectorstores import FAISS
         from langchain_text_splitters import RecursiveCharacterTextSplitter
+        from langchain_core.output_parsers import StrOutputParser
         from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.runnables import RunnablePassthrough
         from langchain_core.documents import Document
 
         #--------Step 2 Initialise modeles-------
         llm = ChatOpenAI(
-            model="gpt=4o-mini",
+            model="gpt-4o-mini",
             temperature=0.0,
             max_tokens=400
         )
@@ -140,18 +141,17 @@ def load_rag_system():
 
         Answer:
         """)
-        #-----Step7 format doc heleper-----------
-        def fromat_docs(docs):
-            return "\n\n".join(
-                f"[Policy {i+1}]: {doc.page_content}"
-                for i, doc in enumerate(docs)
-            )
 
         #----Step 8 Build ask function-----------
         def ask(question):
             try:
                 retrieved_docs = retriever.invoke(question)
-                context        = format_docs(retrieved_docs)
+
+                #Format doc inline - no seperate function
+                context = "\n\n".join(
+                    f"[Policy {i+1}]: {doc.page_content}"
+                    for i, doc in enumerate(retrieved_docs)
+                )
                 answer_chain   = rag_prompt| llm| StrOutputParser()
 
                 result = answer_chain.invoke({
@@ -163,13 +163,13 @@ def load_rag_system():
                 if result is None:
                     answer = "No answer returned. Please try again"
                 elif isinstance(result, str):
-                    answer = answer
+                    answer = result
                 elif isinstance(result, dict):
-                    answer = answer.get("answer") or str(answer)
+                    answer = result.get("answer") or str(answer)
                 elif hasattr(result, "content"):
-                    answer = answer.content
+                    answer = result.content
                 else:
-                    answer = str(answer)
+                    answer = str(result)
                 
                 sources = [doc.page_content for doc in retrieved_docs]
 
@@ -292,7 +292,7 @@ if prompt := st.chat_input("Ask a policy question..."):
             result = ask(prompt)
         
         #Extract answer and source from result dict
-        answer = result.get("answer", "No answer returned")
+        answer = result.get("answer")
         sources = result.get("sources", [])
 
         #Display anser
