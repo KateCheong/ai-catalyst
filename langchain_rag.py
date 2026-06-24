@@ -5,16 +5,31 @@
 #==================================================================
 #updated: added to git repository - phase 4 begin
 
-
+import streamlit as st
 import os
 from dotenv import load_dotenv
 
+# ---- Load API key from either local .env or Streamlit Cloud secrets-----
+# When run locally - reads from .env file
+# when run on Streamlit cloud - reads from secrets manager
+
 load_dotenv()  
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+
+#try local first
 api_key = os.getenv("OPENAI_API_KEY")
+
+#Fall back to Streamlit secrets if not foound locally
 if not api_key:
-    raise ValueError("API key not found. check your .env file.")
-print(f"API key loaded.: {api_key[:5]}...")
+    try:
+        api_key=st.secrets["OPENAI_API_KEY"]
+    except Exception:
+        st.error("API key not found. Check you .env file or Streamlit secrets.")
+        st.stop()
+
+os.environ["OPENAI_API_KEY"] = api_key
+
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+
 
 #langchian import
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
