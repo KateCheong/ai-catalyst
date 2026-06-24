@@ -29,11 +29,11 @@ def load_rag_system():
     Loads the RAG system and caches it.
     Prevents rebuilding the FAISS index on every rerun.
     """
-    from langchain_rag import ask, retriever, test_docs
-    return ask, retriever, test_docs
+    from langchain_rag import ask
+    return ask
 
 #load the cached RAG system
-ask, retriever, test_docs = load_rag_system()
+ask = load_rag_system()
 
 
 #------Page configuration - always first line--------
